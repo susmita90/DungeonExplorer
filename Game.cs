@@ -1,73 +1,146 @@
 ﻿using System;
-using System.Media;
+using System.Linq;
 
 namespace DungeonExplorer
 {
     internal class Game
     {
-        private Player p;
-        private Room r;
+        private Player player;
+        private Room currentRoom;
+        private GameMap map;
 
         public Game()
         {
-            // Init player and room
-            p = new Player("Adventurer", 10);
-            r = new Room("a dimly lit chamber", "a rusty sword");
+            player = new Player("Adventurer", 15);
+            map = new GameMap();
+            currentRoom = map.StartingRoom;
         }
 
         public void Start()
         {
-            // Game start
+            Console.WriteLine($"Welcome, {player.Name}!");
             bool playing = true;
-            Console.WriteLine("You are " + p.GetN() + "! in " + r.GetDescription());
 
-            while (playing)
+            while (playing && player.IsAlive())
             {
-                // Player action loop
-                Console.WriteLine("\nWhat do you want to do?");
-                Console.WriteLine(" - Look: See the room description");
-                Console.WriteLine(" - Status: Check your health and inventory");
-                Console.WriteLine(" - Get: Pick up an item");
-                Console.WriteLine(" - Quit: Exit the game");
+                Console.WriteLine($"\nYou are in {currentRoom.Description}.");
+                currentRoom.ListContents();
 
-                string input = Console.ReadLine().ToLower();
-
-                if (input == "l" || input == "look")
+                if (currentRoom.Monsters.Any())
                 {
-                    Console.WriteLine(r.GetDescription());
-                    if (r.GetItem() != null)
+                    var monster = currentRoom.Monsters.First();
+                    Console.WriteLine($"{monster.Name} blocks your way!");
+
+                    while (monster.IsAlive() && player.IsAlive())
                     {
-                        Console.WriteLine("You see: " + r.GetItem());
+                        Console.WriteLine("\nWhat will you do? (attack / use [item] / status / run)");
+                        string action = Console.ReadLine().ToLower();
+
+                        if (action == "attack")
+                        {
+                            player.Attack(monster);
+                            if (monster.IsAlive())
+                                monster.Attack(player);
+                        }
+                        else if (action.StartsWith("use "))
+                        {
+                            string itemName = action.Substring(4);
+                            var item = player.Inventory.FindItem(itemName);
+                            if (item != null)
+                            {
+                                item.Use(player);
+                                if (item is Potion) player.Inventory.RemoveItem(item);
+                            }
+                            else
+                                Console.WriteLine("You don't have that item.");
+                        }
+                        else if (action == "status")
+                        {
+                            Console.WriteLine($"{player.Name} HP: {player.Health}");
+                            player.Inventory.ListItems();
+                        }
+                        else if (action == "run")
+                        {
+                            Console.WriteLine("You flee back!");
+                            // Move player to previous room if possible (not implemented here)
+                            break;
+                        }
+                        else
+                        {
+                            Console.WriteLine("Invalid command.");
+                        }
+                    }
+
+                    if (!monster.IsAlive())
+                    {
+                        Console.WriteLine($"You defeated the {monster.Name}!");
+                        currentRoom.Monsters.Remove(monster);
+                    }
+                    if (!player.IsAlive())
+                    {
+                        Console.WriteLine("You have been defeated!");
+                        break;
                     }
                 }
-                else if (input == "s" || input == "status")
+                else
                 {
-                    Console.WriteLine("Name: " + p.GetN() + ", HP: " + p.GetH() + ", Inventory: " + p.inv()); // Use getters!
-                }
-                else if (input == "g" || input == "get")
-                {
-                    string item = r.GetItem();
-                    if (item != null)
+                    Console.WriteLine("\nWhat do you want to do?");
+                    Console.WriteLine(" - look: See the room description");
+                    Console.WriteLine(" - status: Check your health and inventory");
+                    Console.WriteLine(" - get [item]: Pick up an item");
+                    Console.WriteLine(" - go [direction]: Move to another room");
+                    Console.WriteLine(" - quit: Exit the game");
+
+                    string input = Console.ReadLine().ToLower();
+
+                    if (input == "look")
                     {
-                        p.pickup(item);
-                        r.RemoveItem();
+                        Console.WriteLine(currentRoom.Description);
+                        currentRoom.ListContents();
+                    }
+                    else if (input == "status")
+                    {
+                        Console.WriteLine($"{player.Name} HP: {player.Health}");
+                        player.Inventory.ListItems();
+                    }
+                    else if (input.StartsWith("get "))
+                    {
+                        string itemName = input.Substring(4);
+                        var item = currentRoom.Items.FirstOrDefault(i => i.Name.ToLower() == itemName.ToLower());
+                        if (item != null)
+                        {
+                            item.Collect(player);
+                            currentRoom.Items.Remove(item);
+                        }
+                        else
+                        {
+                            Console.WriteLine("No such item here.");
+                        }
+                    }
+                    else if (input.StartsWith("go "))
+                    {
+                        string dir = input.Substring(3);
+                        var nextRoom = currentRoom.GetExit(dir);
+                        if (nextRoom != null)
+                        {
+                            currentRoom = nextRoom;
+                        }
+                        else
+                        {
+                            Console.WriteLine("You can't go that way.");
+                        }
+                    }
+                    else if (input == "quit")
+                    {
+                        playing = false;
                     }
                     else
                     {
-                        Console.WriteLine("There's nothing to get here.");
+                        Console.WriteLine("Invalid command.");
                     }
                 }
-                else if (input == "q" || input == "quit")
-                {
-                    playing = false;
-        }
-                else
-                {
-                    Console.WriteLine("Invalid command. Please try again.");
-                }
             }
-
-            Console.WriteLine("Thanks for playing!");
+            Console.WriteLine("Game Over. Thanks for playing!");
         }
     }
 }

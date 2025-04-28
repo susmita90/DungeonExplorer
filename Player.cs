@@ -1,49 +1,24 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Linq;
 
 namespace DungeonExplorer
 {
-    public class Player
+    public class Player : Creature
     {
-        private string n; // 'n' for name
-        private int h; // 'h' for health
-        private string stuff; // inventory
+        public Inventory Inventory { get; private set; }
 
-        public Player(string name, int health)
+        public Player(string name, int health) : base(name, health)
         {
-            n = name;
-            h = health;
-            stuff = null;
+            Inventory = new Inventory();
         }
 
-        public void pickup(string t)
+        public override void Attack(Creature target)
         {
-            if (GetStuff() == null)
-            {
-                SetStuff(t);
-                System.Console.WriteLine(GetN() + " got " + t);
-            }
-            else
-            {
-                System.Console.WriteLine(GetN() +  " can't pickup");
-            }
+            // Use best weapon if available, else punch (1 damage)
+            var weapon = Inventory.Items.OfType<Weapon>().OrderByDescending(w => w.Damage).FirstOrDefault();
+            int damage = weapon != null ? weapon.Damage : 1;
+            Console.WriteLine($"{Name} attacks {target.Name} for {damage} damage!");
+            target.TakeDamage(damage);
         }
-        public string inv()
-        {
-            if (GetStuff() != null) { //If not empty
-                return GetStuff();
-            } else {
-                return "empty";
-            }
-        }
-
-        // Getters
-        public string GetN() { return n; }
-        public int GetH() { return h; }
-        public string GetStuff() { return stuff; }
-
-        // Setters
-        public void SetN(string newName) { n = newName; }
-        public void SetH(int newHealth) { h = newHealth; }
-        public void SetStuff(string newStuff) { stuff = newStuff; }
     }
 }

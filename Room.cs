@@ -1,28 +1,40 @@
-﻿namespace DungeonExplorer
+﻿using System.Collections.Generic;
+using System.Linq;
+
+namespace DungeonExplorer
 {
     public class Room
     {
-        private string description;
-        private string item;
+        public string Description { get; set; }
+        public List<Item> Items { get; private set; }
+        public List<Monster> Monsters { get; private set; }
+        public Dictionary<string, Room> Exits { get; private set; }
 
-        public Room(string description, string item = null)
+        public Room(string description)
         {
-            this.description = description;
-            this.item = item;
+            Description = description;
+            Items = new List<Item>();
+            Monsters = new List<Monster>();
+            Exits = new Dictionary<string, Room>();
         }
 
-        public string GetDescription()
+        public void AddExit(string direction, Room room)
         {
-            return description;
+            Exits[direction.ToLower()] = room;
         }
 
-        public string GetItem()
+        public Room GetExit(string direction)
         {
-            return item;
+            Exits.TryGetValue(direction.ToLower(), out Room room);
+            return room;
         }
-                
-        public void RemoveItem() { //added remove thing
-            item = null;
+
+        public void ListContents()
+        {
+            if (Items.Any())
+                System.Console.WriteLine("You see: " + string.Join(", ", Items));
+            if (Monsters.Any())
+                System.Console.WriteLine("Monsters here: " + string.Join(", ", Monsters.Select(m => m.Name)));
         }
     }
 }
